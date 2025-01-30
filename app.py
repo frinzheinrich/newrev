@@ -271,18 +271,23 @@ def admin():
 
 @app.route('/view_images')
 def view_images():
-    # Connect to the images.db database
-    conn = sqlite3.connect('images.db')
-    cursor = conn.cursor()
+    if current_user.username != 'revtestadmin':  # Replace 'admin' with your admin username
+        flash("Access denied!", "danger")
+        return redirect(url_for('landing'))
 
-    # Query all the images (id, username, upload_timestamp) from the database
-    cursor.execute('SELECT id, username, upload_timestamp FROM images')
-    images = cursor.fetchall()  # List of tuples with (id, username, upload_timestamp)
-
-    conn.close()
-
-    # Return the HTML page with images data
-    return render_template('view_images.html', images=images)
+    else:
+        # Connect to the images.db database
+        conn = sqlite3.connect('images.db')
+        cursor = conn.cursor()
+    
+        # Query all the images (id, username, upload_timestamp) from the database
+        cursor.execute('SELECT id, username, upload_timestamp FROM images')
+        images = cursor.fetchall()  # List of tuples with (id, username, upload_timestamp)
+    
+        conn.close()
+    
+        # Return the HTML page with images data
+        return render_template('view_images.html', images=images)
 
 # Route to retrieve and serve the image from the database
 @app.route('/image/<int:image_id>')
