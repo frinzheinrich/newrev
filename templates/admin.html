@@ -53,6 +53,7 @@
                 <th>Vehicle Type</th>
                 <th>Status</th>
                 <th>Schedule</th>
+                <th>History</th>
                 <th>Actions</th>
             </tr>
             {% for vehicle in vehicles %}
@@ -68,6 +69,7 @@
                 <td contenteditable="true" class="editable" data-id="{{ vehicle.id }}" data-field="vehicle_type">{{ vehicle.vehicle_type }}</td>
                 <td contenteditable="true" class="editable" data-id="{{ vehicle.id }}" data-field="status">{{ vehicle.status }}</td>
                 <td contenteditable="true" class="editable" data-id="{{ vehicle.id }}" data-field="schedule">{{ vehicle.schedule }}</td>
+                <td contenteditable="true" class="editable" data-id="{{ vehicle.id }}" data-field="history">{{ vehicle.history }}</td>
                 <td>
                     <button class="btn-delete" data-id="{{ vehicle.id }}">Delete</button>
                 </td>
@@ -75,6 +77,7 @@
             {% endfor %}
         </table>
     </div>
+        
     <script>
         // Filter vehicles based on user selection
         document.getElementById('filter-button').addEventListener('click', function () {

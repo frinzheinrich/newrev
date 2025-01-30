@@ -1,9 +1,12 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session, redirect, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, session, redirect, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from datetime import datetime, timedelta
 import json
 import os
+import io
+import sqlite3
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -46,7 +49,8 @@ class Vehicle(db.Model):
     license_plate = db.Column(db.String(20), nullable=False, unique=True)
     vehicle_type = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(20), nullable=False, default="unpaid")
-    schedule = db.Column(db.String(100), nullable=True) 
+    schedule = db.Column(db.String(100), nullable=True)
+    history = db.Column(db.Text, default="") 
 
 # Create tables (run this once)
 with app.app_context():
@@ -175,8 +179,14 @@ def payment():
 def get_schedule(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle and vehicle.user_id == current_user.id:
-        return jsonify({'schedule': vehicle.schedule or None}), 200
+        if vehicle.schedule:
+            # Just return the schedule string (assuming it's in 'yyyy-mm-dd' format)
+            schedule_date = vehicle.schedule  # Directly return the string
+        else:
+            schedule_date = None
+        return jsonify({'schedule': schedule_date}), 200
     return jsonify({'schedule': None}), 404
+
 
 @app.route('/save_schedule/<int:vehicle_id>', methods=['POST'])
 @login_required
@@ -185,10 +195,11 @@ def save_schedule(vehicle_id):
     if vehicle and vehicle.user_id == current_user.id:
         data = request.get_json()
         schedule = data.get('schedule')
-        vehicle.schedule = schedule
+        vehicle.schedule = schedule  # Store the schedule as a string in the database
         db.session.commit()
         return jsonify({'success': True}), 200
     return jsonify({'success': False, 'message': 'Vehicle not found or access denied'}), 404
+
 
 @app.route('/remove_schedule/<int:vehicle_id>', methods=['POST'])
 @login_required
@@ -196,6 +207,18 @@ def remove_schedule(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle and vehicle.user_id == current_user.id:
         vehicle.schedule = None
+        db.session.commit()
+        return jsonify({'success': True}), 200
+    return jsonify({'success': False, 'message': 'Vehicle not found or access denied'}), 404
+
+@app.route('/update_service/<int:vehicle_id>', methods=['POST'])
+@login_required
+def update_service(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if vehicle and vehicle.user_id == current_user.id:
+        data = request.get_json()
+        new_service = data.get('service')
+        vehicle.service = new_service
         db.session.commit()
         return jsonify({'success': True}), 200
     return jsonify({'success': False, 'message': 'Vehicle not found or access denied'}), 404
@@ -227,6 +250,7 @@ def admin():
                 vehicle.vehicle_type = data.get('vehicle_type', vehicle.vehicle_type)
                 vehicle.status = data.get('status', vehicle.status)
                 vehicle.schedule = data.get('schedule', vehicle.schedule)
+                vehicle.history = data.get('history', vehicle.history)
                 db.session.commit()
                 return jsonify({'success': True}), 200
 
@@ -245,6 +269,110 @@ def admin():
     vehicles = Vehicle.query.all()
     return render_template('admin.html', users=users, vehicles=vehicles)
 
+@app.route('/view_images')
+def view_images():
+    # Connect to the images.db database
+    conn = sqlite3.connect('images.db')
+    cursor = conn.cursor()
+
+    # Query all the images (id, username, upload_timestamp) from the database
+    cursor.execute('SELECT id, username, upload_timestamp FROM images')
+    images = cursor.fetchall()  # List of tuples with (id, username, upload_timestamp)
+
+    conn.close()
+
+    # Return the HTML page with images data
+    return render_template('view_images.html', images=images)
+
+# Route to retrieve and serve the image from the database
+@app.route('/image/<int:image_id>')
+def image(image_id):
+    # Connect to the images.db database
+    conn = sqlite3.connect('images.db')
+    cursor = conn.cursor()
+
+    # Query the image data based on the image_id
+    cursor.execute('SELECT image_data FROM images WHERE id = ?', (image_id,))
+    image_data = cursor.fetchone()
+
+    conn.close()
+
+    if image_data:
+        # Convert binary data to a file-like object for send_file
+        return send_file(io.BytesIO(image_data[0]), mimetype='image/jpeg')
+    else:
+        return "Image not found", 404
+
+# Route to delete an image
+@app.route('/delete_image/<int:image_id>', methods=['POST'])
+def delete_image(image_id):
+    # Connect to the images.db database
+    conn = sqlite3.connect('images.db')
+    cursor = conn.cursor()
+
+    # Check if the image exists
+    cursor.execute('SELECT * FROM images WHERE id = ?', (image_id,))
+    image = cursor.fetchone()
+
+    if image:
+        # Delete the image
+        cursor.execute('DELETE FROM images WHERE id = ?', (image_id,))
+        conn.commit()
+        conn.close()
+        flash("Image deleted successfully.", "success")
+        return jsonify({'status': 'success'}), 200  # Return success response
+    else:
+        conn.close()
+        flash("Image not found.", "error")
+        return jsonify({'status': 'error'}), 404  # Return error response
+
+
+# Route to upload proof of payment
+@app.route('/upload_payment', methods=['POST'])
+@login_required
+def upload_payment():
+    if 'file' not in request.files:
+        flash("No file part", "error")  # Flash message for no file
+        return redirect(request.referrer)  # Stay on the same page
+
+    file = request.files['file']
+    if file.filename == '':
+        flash("No selected file", "error")  # Flash message for no selected file
+        return redirect(request.referrer)  # Stay on the same page
+
+    # Generate a unique filename based on username and timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"{current_user.username}_{timestamp}.jpg"  # You can change the extension if needed
+
+    # Get the binary data of the image
+    image_data = file.read()
+
+    # Store the metadata in the new 'images.db' database
+    conn = sqlite3.connect('images.db')  # Use a separate database for storing image metadata
+    cursor = conn.cursor()
+
+    # Create the table to store image details (if it doesn't exist)
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        image_data BLOB,
+        upload_timestamp TEXT
+    )
+    ''')
+
+    # Insert image data into the new database
+    cursor.execute('''
+    INSERT INTO images (username, image_data, upload_timestamp)
+    VALUES (?, ?, ?)
+    ''', (current_user.username, image_data, timestamp))
+
+    conn.commit()
+    conn.close()
+
+    # Flash success message
+    flash(f"Proof of payment uploaded successfully as {filename}.", "success")
+    return redirect(request.referrer)
 
 @app.route('/logout')
 def logout():

@@ -213,6 +213,13 @@
             padding: 10px 20px;
         }
 
+        #service-button {
+            background-color: #6BAED6; /* Ensure color matches */
+            border: none; /* Remove the inner border or box */
+            border-radius: 25px; /* Match other buttons */
+            padding: 10px 20px;
+        }
+
         .btn-save {
             background-color: #4caf50;
             color: white;
@@ -230,6 +237,18 @@
         .btn-cancel:hover {
             background-color: #e53935;
         }
+
+        .dropdown-menu {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            position: absolute;
+            z-index: 1;
+            display: none; /* Initially hide the dropdown */
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
 
         /* Animations */
         @keyframes slideIn {
@@ -287,13 +306,31 @@
                         <h2>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h2>
                         <img src="/static/images/{{ vehicle.vehicle_type | lower }}.png" alt="{{ vehicle.type }}">
                         <div class="mini-islands">
-                            <div class="mini-island">{{ vehicle.service }}</div>
+                            <div class="mini-island">
+                                <service-button id="current-service-{{ vehicle.id }}" onclick="toggleDropdown('{{ vehicle.id }}')">
+                                    {{ vehicle.service }}
+                                </service-button>
+                                <div id="dropdown-{{ vehicle.id }}" class="dropdown-menu" style="display: none;">
+                                    <h3 style="color: black;">Change Service Type</h3>
+                                    <select id="service-select-{{ vehicle.id }}">
+                                        <option value="Dapper">Dapper</option>
+                                        <option value="Suave">Suave</option>
+                                        <option value="Slick">Slick</option>
+                                    </select>
+                                    <button onclick="confirmChange('{{ vehicle.id }}')">Confirm</button>
+                                    <button onclick="toggleDropdown('{{ vehicle.id }}')">Cancel</button>
+                                </div>
+                            </div>                            
                             <div class="mini-island">
                                 <schedule-button  data-id="{{ vehicle.id }}" onclick="openScheduleModal(this)">
                                     Schedule
                                 </schedule-button>
                             </div>
-                            <div class="mini-island">History</div>
+                            <div class="mini-island">
+                                <schedule-button data-id="{{ vehicle.id }}" onclick="openHistoryModal(this)" data-history='{{ vehicle.history|safe }}'>
+                                    History
+                                </schedule-button>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
@@ -319,14 +356,25 @@
                 <h2>Schedule for <span id="vehicleName"></span></h2>
                 <form id="scheduleForm">
                     <label for="scheduleInput">Schedule:</label>
-                    <input type="text" id="scheduleInput" name="schedule" placeholder="Enter schedule">
+                    <input type="date" id="scheduleInput" name="schedule">
                     <input type="hidden" id="vehicleIdInput" name="vehicle_id">
                     <button type="button" onclick="saveSchedule()">Save</button>
                 </form>
                 <button type="button" onclick="deleteSchedule()">Remove Schedule</button>
             </div>
         </div>
-        
+
+        <!-- History Popup Modal -->
+        <div id="history-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <div class="mini-island">
+                    <h3>History</h3>
+                    <p id="history-content">No history available.</p>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Modal for Adding New Vehicle -->
         <div id="add-vehicle-modal" class="modal">
@@ -368,6 +416,25 @@
                 </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelector(".close-btn").addEventListener("click", function () {
+                document.getElementById("history-modal").style.display = "none";
+            });
+        });
+
+        function openHistoryModal(button) {
+            // Get history as plain text
+            let historyText = button.getAttribute("data-history") || "No history available.";  // Default to "No history available" if empty
+
+            // Set the modal content to the plain history text
+            document.getElementById("history-content").innerText = historyText;
+
+            // Show the modal
+            document.getElementById("history-modal").style.display = "block";
+        }
+    </script>
 
     <script>
         // JavaScript for modal behavior
@@ -479,11 +546,22 @@
             document.getElementById('vehicleName').textContent = vehicleName;
             document.getElementById('vehicleIdInput').value = vehicleId;
 
+            // Set date range for the input
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1); // Start from tomorrow
+            const maxDate = new Date(today);
+            maxDate.setDate(today.getDate() + 30); // Up to 30 days from today
+
+            const scheduleInput = document.getElementById('scheduleInput');
+            scheduleInput.min = tomorrow.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            scheduleInput.max = maxDate.toISOString().split('T')[0];
+
             // Fetch current schedule
             fetch(`/get_schedule/${vehicleId}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('scheduleInput').value = data.schedule || '';
+                    scheduleInput.value = data.schedule || '';
                     document.getElementById('scheduleModal').style.display = 'block';
                 })
                 .catch(err => alert('Error fetching schedule.'));
@@ -496,6 +574,11 @@
         function saveSchedule() {
             const vehicleId = document.getElementById('vehicleIdInput').value;
             const schedule = document.getElementById('scheduleInput').value;
+
+            if (!schedule) {
+                alert('Please select a valid date.');
+                return;
+            }
 
             fetch(`/save_schedule/${vehicleId}`, {
                 method: 'POST',
@@ -530,6 +613,48 @@
                 }
             });
         }
+    </script>
+
+    <script>
+        function toggleDropdown(vehicleId) {
+            const dropdown = document.getElementById(`dropdown-${vehicleId}`);
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function confirmChange(vehicleId) {
+            const select = document.getElementById(`service-select-${vehicleId}`);
+            const newService = select.value;
+            const confirmed = confirm(`Are you sure you want to change the service to "${newService}"?`);
+
+            if (confirmed) {
+                saveService(vehicleId, newService);
+            } else {
+                toggleDropdown(vehicleId); // Hide the dropdown if the user cancels
+            }
+        }
+
+        function saveService(vehicleId, newService) {
+            fetch(`/update_service/${vehicleId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ service: newService }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the displayed service and hide the dropdown
+                        document.getElementById(`current-service-${vehicleId}`).textContent = newService;
+                        toggleDropdown(vehicleId);
+                        alert('Service updated successfully!');
+                    } else {
+                        alert('Failed to update service. Please try again.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
     </script>
 
     <!-- Footer Section -->

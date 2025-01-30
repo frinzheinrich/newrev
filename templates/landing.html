@@ -197,6 +197,19 @@
             background-color: #c7302e;
         }
 
+        .btn-subscribe {
+            background-color: #5898d3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .btn-subscribe:hover {
+            background-color: #3665ba;
+        }
+
         /* Animations */
         @keyframes slideIn {
             from {
@@ -233,10 +246,11 @@
             <p class="price" id="servicePrice"></p>
             <div class="modal-buttons">
                 <button class="btn-close" onclick="closeModal()">Close</button>
+                <button class="btn-subscribe" onclick="redirectToInventory()">Subscribe</button>
             </div>
         </div>
     </div>
-
+    
     <script>
         // Modal open and close functionality
         const modal = document.getElementById('serviceModal');
@@ -244,7 +258,7 @@
         const serviceName = document.getElementById('serviceName');
         const serviceDescription = document.getElementById('serviceDescription');
         const servicePrice = document.getElementById('servicePrice');
-
+    
         // Service data
         const services = {
             dapper: {
@@ -263,7 +277,7 @@
                 price: 'P999/month'
             }
         };
-
+    
         // Function to open the modal with service details
         function openModal(service) {
             serviceName.textContent = services[service].name;
@@ -271,25 +285,31 @@
             servicePrice.textContent = services[service].price;
             modal.style.display = 'flex';
         }
-
+    
         // Function to close the modal
         function closeModal() {
             modal.style.display = 'none';
         }
-
+    
+        // Function to redirect to inventory.html
+        function redirectToInventory() {
+            window.location.href = 'inventory';
+        }
+    
         // Event listeners for islands
         document.getElementById('dapper').addEventListener('click', function() {
             openModal('dapper');
         });
-
+    
         document.getElementById('suave').addEventListener('click', function() {
             openModal('suave');
         });
-
+    
         document.getElementById('slick').addEventListener('click', function() {
             openModal('slick');
         });
     </script>
+    
 
     <!-- Footer Section -->
     <div class="footer">

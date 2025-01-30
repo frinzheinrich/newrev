@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Uploaded Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .image-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .image-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .image-card img {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+        }
+        .image-card p {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .delete-btn {
+            margin-top: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Uploaded Images</h1>
+
+    <div class="image-gallery">
+        {% for image in images %}
+        <div class="image-card" id="image-{{ image[0] }}">
+            <!-- Serve the image by fetching it from the database -->
+            <img src="{{ url_for('image', image_id=image[0]) }}" alt="Uploaded Image">
+            <p>Uploaded by: {{ image[1] }} <br> Timestamp: {{ image[2] }}</p>
+
+            <!-- Delete Button -->
+            <button class="delete-btn" data-image-id="{{ image[0] }}">Delete</button>
+        </div>
+        {% else %}
+        <p>No images found.</p>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Attach event listeners to the delete buttons
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const imageId = this.getAttribute('data-image-id');
+                
+                if (confirm("Are you sure you want to delete this image?")) {
+                    // Send the POST request to delete the image
+                    fetch(`/delete_image/${imageId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ image_id: imageId })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Remove the image from the DOM upon successful deletion
+                            const imageCard = document.getElementById(`image-${imageId}`);
+                            imageCard.remove();
+                        } else {
+                            alert('Failed to delete the image');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error occurred while deleting the image');
+                    });
+                }
+            });
+        });
+
+    </script>
+
+</body>
+</html>

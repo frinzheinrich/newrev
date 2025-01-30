@@ -68,6 +68,11 @@
             transform: translateY(-5px);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
         }
+
+        .upload-container {
+            text-align: center;
+            margin-top: 20px;
+        }
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
             .container {
@@ -137,6 +142,13 @@
             <p><strong>Gcash Number:</strong> 09176975817 </p>
             <img src="/static/images/qr.png" alt="QR Code for Payment">
         </div>
+        <div class="upload-container">
+            <h3>Upload Proof of Payment</h3>
+            <form action="/upload_payment" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" accept="image/*" required>
+                <button type="submit">Upload Payment</button>
+            </form>
+        </div>
     </div>
     <div class="mini-island" role="button" tabindex="0" onclick="window.location.href='/profile'">
         Back to Home
@@ -149,6 +161,33 @@
             total += parseInt(cell.textContent.replace('$', '').trim());
         });
         document.getElementById('total').textContent = total;
+    </script>
+
+    <script>
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select an image to upload.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("uploadStatus").textContent = data.message;
+            })
+            .catch(error => {
+                console.error("Error uploading image:", error);
+                document.getElementById("uploadStatus").textContent = "Upload failed.";
+            });
+        }
     </script>
 </body>
 </html>
