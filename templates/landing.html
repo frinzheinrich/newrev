@@ -263,25 +263,43 @@
         const services = {
             dapper: {
                 name: 'Dapper',
-                description: 'Dapper provides a premium wash that includes a full exterior clean, tire shine, and a wax finish to keep your car looking fresh all month long.',
-                price: 'P799/month'
+                description: `
+                    <ul style="text-align: left; padding-left: 20px;">
+                        <li>Premium car wash</li>
+                        <li>Hand-applied wax</li>
+                        <li>Interior Vacuuming</li>
+                    </ul>`,
+                price: 'P1500/month'
             },
             suave: {
                 name: 'Suave',
-                description: 'Suave offers an eco-friendly carwash with a waterless formula, perfect for busy drivers who need a quick and efficient clean without wasting water.',
-                price: 'P899/month'
+                description: `
+                    <ul style="text-align: left; padding-left: 20px;">
+                        <li>Premium car wash</li>
+                        <li>Hand-applied wax</li>
+                        <li>Interior Vacuuming</li>
+                        <li>Tire black application for a polished look</li>
+                    </ul>`,
+                price: 'P2200/month'
             },
             slick: {
                 name: 'Slick',
-                description: 'Slick combines cutting-edge technology with premium cleaning solutions, giving your car a spot-free shine and a flawless finish every time.',
-                price: 'P999/month'
+                description: `
+                    <ul style="text-align: left; padding-left: 20px;">
+                        <li>Premium car wash</li>
+                        <li>Hand-applied wax</li>
+                        <li>Interior Vacuuming</li>
+                        <li>Tire black application for a polished look</li>
+                        <li>Quick Interior Wipe-Down (Dash, Console, & Door Panels)</li>
+                    </ul>`,
+                price: 'P3000/month'
             }
         };
     
         // Function to open the modal with service details
         function openModal(service) {
             serviceName.textContent = services[service].name;
-            serviceDescription.textContent = services[service].description;
+            serviceDescription.innerHTML = services[service].description;
             servicePrice.textContent = services[service].price;
             modal.style.display = 'flex';
         }
@@ -308,7 +326,7 @@
         document.getElementById('slick').addEventListener('click', function() {
             openModal('slick');
         });
-    </script>
+    </script>   
     
 
     <!-- Footer Section -->
