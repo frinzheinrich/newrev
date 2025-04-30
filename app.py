@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session, redirect, jsonify, send_file
+from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -7,13 +7,14 @@ import json
 import os
 import io
 import sqlite3
+import psycopg2
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 
 # Configure the database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -21,10 +22,8 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Check if the database file exists, if not, create it
-if not os.path.exists('database.db'):
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    db.create_all()
 
 # User model
 class User(db.Model, UserMixin):
