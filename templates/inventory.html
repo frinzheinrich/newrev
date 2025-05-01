@@ -11,7 +11,7 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            font-family: Arial, sans-serif;
+            font-family: Arial, sans-ser
         }
 
         /* Background setup */
@@ -546,6 +546,7 @@
             document.getElementById('vehicleName').textContent = vehicleName;
             document.getElementById('vehicleIdInput').value = vehicleId;
 
+            const scheduleInput = document.getElementById('scheduleInput');
             // Set date range for the input
             const today = new Date();
             const tomorrow = new Date(today);
@@ -553,9 +554,15 @@
             const maxDate = new Date(today);
             maxDate.setDate(today.getDate() + 30); // Up to 30 days from today
 
-            const scheduleInput = document.getElementById('scheduleInput');
-            scheduleInput.min = tomorrow.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-            scheduleInput.max = maxDate.toISOString().split('T')[0];
+            const minStr = tomorrow.toISOString().split('T')[0];
+            const maxStr = maxDate.toISOString().split('T')[0];
+            
+            scheduleInput.setAttribute('min', minStr);
+            scheduleInput.setAttribute('max', maxStr);
+            
+            // Important: set value to within bounds to avoid mobile rendering issues
+            scheduleInput.value = minStr;
+
 
             // Fetch current schedule
             fetch(`/get_schedule/${vehicleId}`)
