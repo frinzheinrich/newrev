@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         /* Resetting margin and padding */
         body, html {
@@ -356,7 +358,7 @@
                 <h2>Schedule for <span id="vehicleName"></span></h2>
                 <form id="scheduleForm">
                     <label for="scheduleInput">Schedule:</label>
-                    <input type="date" id="scheduleInput" name="schedule">
+                    <input type="text" id="scheduleInput" name="schedule">
                     <input type="hidden" id="vehicleIdInput" name="vehicle_id">
                     <button type="button" onclick="saveSchedule()">Save</button>
                 </form>
@@ -541,39 +543,46 @@
         function openScheduleModal(button) {
             const vehicleId = button.dataset.id;
             const vehicleName = button.closest('.big-island').querySelector('h2').textContent;
-
+        
             // Populate modal
             document.getElementById('vehicleName').textContent = vehicleName;
             document.getElementById('vehicleIdInput').value = vehicleId;
-
-            const scheduleInput = document.getElementById('scheduleInput');
-            // Set date range for the input
+        
             const today = new Date();
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1); // Start from tomorrow
+        
             const maxDate = new Date(today);
             maxDate.setDate(today.getDate() + 30); // Up to 30 days from today
-
-            const minStr = tomorrow.toISOString().split('T')[0];
-            const maxStr = maxDate.toISOString().split('T')[0];
-            
-            scheduleInput.setAttribute('min', minStr);
-            scheduleInput.setAttribute('max', maxStr);
-            
-            // Important: set value to within bounds to avoid mobile rendering issues
-            scheduleInput.value = minStr;
-
-
+        
+            const scheduleInput = document.getElementById('scheduleInput');
+        
+            // Destroy previous instance to avoid duplicate flatpickrs
+            if (scheduleInput._flatpickr) {
+                scheduleInput._flatpickr.destroy();
+            }
+        
+            // Initialize Flatpickr with restricted range
+            flatpickr(scheduleInput, {
+                minDate: tomorrow,
+                maxDate: maxDate,
+                defaultDate: tomorrow,
+                dateFormat: "Y-m-d",
+                disableMobile: true // Force Flatpickr even on iOS
+            });
+        
             // Fetch current schedule
             fetch(`/get_schedule/${vehicleId}`)
                 .then(response => response.json())
                 .then(data => {
-                    scheduleInput.value = data.schedule || '';
+                    if (data.schedule) {
+                        scheduleInput._flatpickr.setDate(data.schedule);
+                    }
                     document.getElementById('scheduleModal').style.display = 'block';
                 })
                 .catch(err => alert('Error fetching schedule.'));
         }
-
+        
         function closeScheduleModal() {
             document.getElementById('scheduleModal').style.display = 'none';
         }
